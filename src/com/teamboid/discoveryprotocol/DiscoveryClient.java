@@ -13,6 +13,7 @@ import android.content.Context;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 
 /**
  * @author Aidan Follestad
@@ -84,8 +85,7 @@ public class DiscoveryClient {
 		JSONObject content = new JSONObject(
 				new String(packet.getData(), "UTF8"));
 		events.onReceive(content, address);
-		DiscoveryEntity entity = new DiscoveryEntity(content.optString("name"),
-				address, content.optString("status"));
+		DiscoveryEntity entity = new DiscoveryEntity(address, content);
 
 		if (content.optString("type").equals("discovery")) {
 			events.onDiscoveryRequest(entity);
@@ -163,6 +163,7 @@ public class DiscoveryClient {
 	public void discover() {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "discovery" });
+		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "status", _status });
 		send(toSend, broadcastAdr);
@@ -175,9 +176,10 @@ public class DiscoveryClient {
 	public void respond(DiscoveryEntity request) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "response" });
+		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "status", _status });
-		send(toSend, request.getIP());
+		send(toSend, request.getAddress());
 	}
 
 	/**
@@ -186,6 +188,7 @@ public class DiscoveryClient {
 	public void online() {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "online" });
+		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "status", _status });
 		send(toSend, broadcastAdr);
@@ -197,10 +200,11 @@ public class DiscoveryClient {
 	public void message(DiscoveryEntity to, String message) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "chat" });
+		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "message", message });
 		toSend.add(new String[] { "status", _status });
-		send(toSend, to.getIP());
+		send(toSend, to.getAddress());
 	}
 
 	/**
@@ -214,6 +218,7 @@ public class DiscoveryClient {
 		if (broadcastUpdate) {
 			ArrayList<String[]> toSend = new ArrayList<String[]>();
 			toSend.add(new String[] { "type", "status" });
+			toSend.add(new String[] { "id", Build.SERIAL });
 			toSend.add(new String[] { "name", _name });
 			toSend.add(new String[] { "status", _status });
 			send(toSend, broadcastAdr);
@@ -226,9 +231,10 @@ public class DiscoveryClient {
 	public void ping(DiscoveryEntity to) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "ping" });
+		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "status", _status });
-		send(toSend, to.getIP());
+		send(toSend, to.getAddress());
 	}
 	
 	/**
@@ -238,6 +244,7 @@ public class DiscoveryClient {
 	public void offline() {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "offline" });
+		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "status", _status });
 		send(toSend, broadcastAdr);
@@ -254,6 +261,7 @@ public class DiscoveryClient {
 		if (broadcastUpdate) {
 			ArrayList<String[]> toSend = new ArrayList<String[]>();
 			toSend.add(new String[] { "type", "nickname" });
+			toSend.add(new String[] { "id", Build.SERIAL });
 			toSend.add(new String[] { "name", _name });
 			toSend.add(new String[] { "status", _status });
 			send(toSend, broadcastAdr);

@@ -3,6 +3,8 @@ package com.teamboid.discoveryprotocol;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import org.json.JSONObject;
+
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -14,14 +16,16 @@ import android.os.Parcelable;
  */
 public class DiscoveryEntity implements Parcelable {
 
-	public DiscoveryEntity(String name, InetAddress ip, String status) {
-		_name = name;
-		_ip = ip;
-		_status = status;
+	public DiscoveryEntity(InetAddress ip, JSONObject json) {
+		_address = ip;
+		_id = json.optString("id");
+		_name = json.optString("name");
+		_status = json.optString("status");
 	}
 
+	private InetAddress _address;
+	private String _id;
 	private String _name;
-	private InetAddress _ip;
 	private String _status;
 	
 	/**
@@ -38,17 +42,41 @@ public class DiscoveryEntity implements Parcelable {
 	 * 
 	 * @return
 	 */
-	public InetAddress getIP() {
-		return _ip;
+	public InetAddress getAddress() {
+		return _address;
 	}
 	
+	/**
+	 * Convenience method. Returns the value of {@link #getName()}, unless it's null, 
+	 * in which case it returns the value of {@link #getAddress()}.getHostAddress(). 
+	 */
+	public String getDisplay() {
+		if(getName() == null || getName().trim().isEmpty()) {
+			return getAddress().getHostAddress();
+		} else { 
+			return getName();
+		}
+	}
+	
+	/**
+	 * Gets a unique identifier for the entity that no other entity will have (this value
+	 * is derived from the serial number of an Android device).
+	 * @return
+	 */
+	public String getID() {
+		return _id;
+	}
+	
+	/**
+	 * Gets the status message of the entity.
+	 */
 	public String getStatus() {
 		return _status;
 	}
 
 	@Override
 	public String toString() {
-		return "DiscoveryRequest [" + _name + ", " + _ip.getHostAddress() + ", " + _status + "]";
+		return "DiscoveryRequest [" + _name + ", " + _address.getHostAddress() + ", " + _status + "]";
 	}
 
 	@Override
@@ -58,8 +86,9 @@ public class DiscoveryEntity implements Parcelable {
 
 	@Override
 	public void writeToParcel(Parcel dest, int flags) {
-		dest.writeString(getName());
-		dest.writeString(getIP().getHostAddress());
+		dest.writeString(_address.getHostAddress());
+		dest.writeString(_id);
+		dest.writeString(_name);
 		dest.writeString(_status);
 	}
 
@@ -74,12 +103,13 @@ public class DiscoveryEntity implements Parcelable {
 	};
 
 	private DiscoveryEntity(Parcel in) {
-		_name = in.readString();
 		try {
-			_ip = InetAddress.getByName(in.readString());
+			_address = InetAddress.getByName(in.readString());
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
+		_id = in.readString();
+		_name = in.readString();
 		_status = in.readString();
 	}
 }
