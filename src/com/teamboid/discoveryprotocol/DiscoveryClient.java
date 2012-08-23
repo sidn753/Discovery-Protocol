@@ -71,7 +71,7 @@ public class DiscoveryClient {
 	private DiscoveryListener events;
 	private String _name;
 	private String _status;
-	private boolean _filterOwn;
+	private boolean _filterOwn = true;
 	
 	private final static int NETWORK_PORT = 2000;
 
