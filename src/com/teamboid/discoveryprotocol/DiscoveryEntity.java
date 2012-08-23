@@ -30,9 +30,6 @@ public class DiscoveryEntity implements Parcelable {
 	 * @return
 	 */
 	public String getName() {
-		if(_name == null || _name.isEmpty()) {
-			return _ip.getHostAddress();
-		}
 		return _name;
 	}
 

@@ -101,6 +101,8 @@ public class DiscoveryClient {
 			events.onNameChange(entity);
 		} else if (content.optString("type").equals("status")) {
 			events.onStatus(entity);
+		} else if (content.optString("type").equals("ping")) {
+			events.onPing(entity);
 		} else {
 			events.onError("Received unknown request from "
 					+ address.getHostAddress() + " (type: "
