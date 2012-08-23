@@ -35,6 +35,11 @@ public interface DiscoveryListener {
 	public void onMessage(DiscoveryEntity from, String message);
 	
 	/**
+	 * Called when another entity updates their status (contained in the DiscoveryEntity object). 
+	 */
+	public void onStatus(DiscoveryEntity from);
+	
+	/**
 	 * Called when another entity updates their display name. 
 	 */
 	public void onNameChange(DiscoveryEntity from, String nickname);

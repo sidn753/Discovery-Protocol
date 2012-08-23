@@ -55,8 +55,9 @@ public class DiscoveryClient {
 		int intMyIp1 = intMyIp2mod / 0x100;
 		int intMyIp0 = intMyIp2mod % 0x100;
 		try {
-			return InetAddress.getByName(String.valueOf(intMyIp0) + "." + String.valueOf(intMyIp1) + "."
-					+ String.valueOf(intMyIp2) + "." + String.valueOf(intMyIp3));
+			return InetAddress.getByName(String.valueOf(intMyIp0) + "."
+					+ String.valueOf(intMyIp1) + "." + String.valueOf(intMyIp2)
+					+ "." + String.valueOf(intMyIp3));
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			return null;
@@ -69,20 +70,21 @@ public class DiscoveryClient {
 	private DatagramSocket socket;
 	private DiscoveryListener events;
 	private String _name;
+	private String _status;
 
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
 		InetAddress address = packet.getAddress();
-		if(address.getHostAddress().equals(myIP.getHostAddress())) {
-			//Filter out packet broadcasts that you sent.
+		if (address.getHostAddress().equals(myIP.getHostAddress())) {
+			// Filter out packet broadcasts that you sent.
 			return;
 		}
 		JSONObject content = new JSONObject(
 				new String(packet.getData(), "UTF8"));
 		events.onReceive(content, address);
 		DiscoveryEntity entity = new DiscoveryEntity(content.optString("name"),
-				address);
+				address, content.optString("status"));
 
 		if (content.optString("type").equals("discovery")) {
 			events.onDiscoveryRequest(entity);
@@ -96,6 +98,8 @@ public class DiscoveryClient {
 			events.onOffline(entity);
 		} else if (content.optString("type").equals("nickname")) {
 			events.onNameChange(null, content.optString("name"));
+		} else if (content.optString("type").equals("status")) {
+			events.onStatus(entity);
 		} else {
 			events.onError("Received unknown request from "
 					+ address.getHostAddress() + " (type: "
@@ -157,6 +161,7 @@ public class DiscoveryClient {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "discovery" });
 		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
 		send(toSend, broadcastAdr);
 	}
 
@@ -168,6 +173,7 @@ public class DiscoveryClient {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "response" });
 		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
 		send(toSend, request.getIP());
 	}
 
@@ -178,6 +184,7 @@ public class DiscoveryClient {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "online" });
 		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
 		send(toSend, broadcastAdr);
 	}
 
@@ -189,7 +196,25 @@ public class DiscoveryClient {
 		toSend.add(new String[] { "type", "chat" });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "message", message });
+		toSend.add(new String[] { "status", _status });
 		send(toSend, to.getIP());
+	}
+
+	/**
+	 * Updates your status message. When 'true' is passed in the second
+	 * parameter, the status will be immediately broadcasted telling other
+	 * entities of your new status. Otherwise it will be passed in future
+	 * requests.
+	 */
+	public void status(String message, boolean broadcastUpdate) {
+		_status = message;
+		if (broadcastUpdate) {
+			ArrayList<String[]> toSend = new ArrayList<String[]>();
+			toSend.add(new String[] { "type", "status" });
+			toSend.add(new String[] { "name", _name });
+			toSend.add(new String[] { "status", _status });
+			send(toSend, broadcastAdr);
+		}
 	}
 
 	/**
@@ -200,14 +225,15 @@ public class DiscoveryClient {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "offline" });
 		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
 		send(toSend, broadcastAdr);
 	}
 
 	/**
 	 * Sets your nickname that's displayed to other users. When 'true' is passed
-	 * in the second parameter, a notification will be broadcasted telling other
-	 * entities of your new nickname. Otherwise it will be passed in future
-	 * requests.
+	 * in the second parameter, the nickname will immediately be broadcasted
+	 * telling other entities of your new nickname. Otherwise it will be passed
+	 * in future requests.
 	 */
 	public void nickname(String name, boolean broadcastUpdate) {
 		_name = name;
@@ -215,6 +241,7 @@ public class DiscoveryClient {
 			ArrayList<String[]> toSend = new ArrayList<String[]>();
 			toSend.add(new String[] { "type", "nickname" });
 			toSend.add(new String[] { "name", _name });
+			toSend.add(new String[] { "status", _status });
 			send(toSend, broadcastAdr);
 		}
 	}
