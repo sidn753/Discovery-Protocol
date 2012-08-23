@@ -37,7 +37,7 @@ public interface DiscoveryListener {
 	/**
 	 * Called when another entity updates their display name. 
 	 */
-	public void onNameChange(DiscoveryEntity from, String nicknaem);
+	public void onNameChange(DiscoveryEntity from, String nickname);
 	
 	/**
 	 * Called when another entity broadcasts a message telling other entities they're going offline.

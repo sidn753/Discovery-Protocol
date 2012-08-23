@@ -3,7 +3,6 @@ package com.teamboid.discoveryprotocol;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 import org.json.JSONException;
@@ -19,11 +18,10 @@ import android.net.wifi.WifiManager;
 public class DiscoveryClient {
 
 	public DiscoveryClient(Context context) throws Exception {
-		receiveAdr = InetAddress.getByName("0.0.0.0");
 		broadcastAdr = getBroadcastAddress(context);
-		socket = new DatagramSocket();
+		socket = new DatagramSocket(NETWORK_PORT);
 		socket.setBroadcast(true);
-
+		socket.setReuseAddress(true);
 		startReceiveThread();
 	}
 
@@ -41,7 +39,6 @@ public class DiscoveryClient {
 	}
 
 	private InetAddress broadcastAdr;
-	private InetAddress receiveAdr;
 	private Thread receiveThread;
 	private DatagramSocket socket;
 	private DiscoveryListener events;
@@ -77,18 +74,15 @@ public class DiscoveryClient {
 	}
 
 	private void startReceiveThread() throws Exception {
-		final DatagramSocket recvSock = new DatagramSocket();
-		recvSock.setBroadcast(true);
-		recvSock.setReuseAddress(true);
-		recvSock.bind(new InetSocketAddress(receiveAdr, NETWORK_PORT));
 		receiveThread = new Thread(new Runnable() {
 			public void run() {
 				while (true) {
+					if(socket == null || socket.isClosed()) break;
 					byte[] receiveData = new byte[1024];
 					DatagramPacket receivePacket = new DatagramPacket(
 							receiveData, receiveData.length);
 					try {
-						recvSock.receive(receivePacket);
+						socket.receive(receivePacket);
 						processPacket(receivePacket);
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -201,7 +195,8 @@ public class DiscoveryClient {
 
 	@Override
 	public void finalize() {
+		socket.close();
+		socket = null;
 		receiveThread.interrupt();
-		receiveThread = null;
 	}
 }
