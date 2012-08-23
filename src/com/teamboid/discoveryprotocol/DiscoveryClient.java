@@ -6,26 +6,42 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.content.Context;
+import android.net.DhcpInfo;
+import android.net.wifi.WifiManager;
 
 /**
  * @author Aidan Follestad
  */
 public class DiscoveryClient {
 
-	public DiscoveryClient() throws Exception {
+	public DiscoveryClient(Context context) throws Exception {
 		receiveAdr = InetAddress.getByName("0.0.0.0");
-		broadcastAdr = InetAddress.getByName("255.255.255.255");
-
+		broadcastAdr = getBroadcastAddress(context);
 		socket = new DatagramSocket();
 		socket.setBroadcast(true);
-		socket.setReuseAddress(true);
 
 		startReceiveThread();
 	}
 
-	private InetAddress receiveAdr;
+	private InetAddress getBroadcastAddress(Context mContext) throws Exception {
+	    WifiManager wifi = (WifiManager)mContext.getSystemService(Context.WIFI_SERVICE);
+	    DhcpInfo dhcp = wifi.getDhcpInfo();
+	    if(dhcp == null) {
+	    	throw new Exception("DHCP info is null, check for a Wifi connection!");
+	    }
+	    int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
+	    byte[] quads = new byte[4];
+	    for (int k = 0; k < 4; k++)
+	      quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
+	    return InetAddress.getByAddress(quads);
+	}
+
 	private InetAddress broadcastAdr;
+	private InetAddress receiveAdr;
 	private Thread receiveThread;
 	private DatagramSocket socket;
 	private DiscoveryListener events;
@@ -37,6 +53,7 @@ public class DiscoveryClient {
 		JSONObject content = new JSONObject(
 				new String(packet.getData(), "UTF8"));
 		InetAddress address = packet.getAddress();
+		events.onReceive(content, address);
 		DiscoveryEntity entity = new DiscoveryEntity(content.optString("name"),
 				address);
 
@@ -83,15 +100,25 @@ public class DiscoveryClient {
 		receiveThread.start();
 	}
 
-	private void send(ArrayList<String[]> atts, InetAddress to)
-			throws Exception {
+	private void send(ArrayList<String[]> atts, InetAddress to) {
 		JSONObject toSend = new JSONObject();
 		for (String[] a : atts) {
-			toSend.put(a[0], a[1]);
+			try {
+				toSend.put(a[0], a[1]);
+			} catch (JSONException e) {
+				e.printStackTrace();
+				events.onError(e.getMessage());
+			}
 		}
-		byte[] sendData = toSend.toString().getBytes("UTF8");
-		socket.send(new DatagramPacket(sendData, sendData.length, to,
+		try {
+			byte[] sendData = toSend.toString().getBytes("UTF8");
+			socket.send(new DatagramPacket(sendData, sendData.length, to,
 				NETWORK_PORT));
+		} catch(Exception e) {
+			e.printStackTrace();
+			events.onError("Failed to send a '" + atts.get(0) + "' request! " + e.getMessage());
+		}
+		events.onSent(toSend, to);
 	}
 
 	
@@ -99,7 +126,7 @@ public class DiscoveryClient {
 	 * Broadcasts a discovery request; when entities choose to respond to the
 	 * request, you will receive a callback.
 	 */
-	public void discover() throws Exception {
+	public void discover() {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "discovery" });
 		toSend.add(new String[] { "name", _name });
@@ -110,7 +137,7 @@ public class DiscoveryClient {
 	 * Responds to a discovery request, making you visible to the requesting
 	 * entity.
 	 */
-	public void respond(DiscoveryEntity request) throws Exception {
+	public void respond(DiscoveryEntity request) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "response" });
 		toSend.add(new String[] { "name", _name });
@@ -120,7 +147,7 @@ public class DiscoveryClient {
 	/**
 	 * Broadcasts an online notification, telling other entities you're online.
 	 */
-	public void online() throws Exception {
+	public void online() {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "online" });
 		toSend.add(new String[] { "name", _name });
@@ -130,7 +157,7 @@ public class DiscoveryClient {
 	/**
 	 * Sends a chat message to another entity.
 	 */
-	public void message(DiscoveryEntity to, String message) throws Exception {
+	public void message(DiscoveryEntity to, String message) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "chat" });
 		toSend.add(new String[] { "name", _name });
@@ -142,7 +169,7 @@ public class DiscoveryClient {
 	 * Broadcasts an offline notification, telling other entities you're going
 	 * offline.
 	 */
-	public void offline() throws Exception {
+	public void offline() {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "offline" });
 		toSend.add(new String[] { "name", _name });
@@ -155,7 +182,7 @@ public class DiscoveryClient {
 	 * entities of your new nickname. Otherwise it will be passed in future
 	 * requests.
 	 */
-	public void setName(String name, boolean broadcastUpdate) throws Exception {
+	public void nickname(String name, boolean broadcastUpdate) {
 		_name = name;
 		if (broadcastUpdate) {
 			ArrayList<String[]> toSend = new ArrayList<String[]>();

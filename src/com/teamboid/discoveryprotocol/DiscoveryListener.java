@@ -1,5 +1,9 @@
 package com.teamboid.discoveryprotocol;
 
+import java.net.InetAddress;
+
+import org.json.JSONObject;
+
 /**
  * @author Aidan Follestad
  */
@@ -42,7 +46,17 @@ public interface DiscoveryListener {
 	public void onOffline(DiscoveryEntity entity);
 	
 	/**
-	 * Called when an error occurs in the receival thread (runs in the background and receives data).
+	 * Called when an error occurs.
 	 */
 	public void onError(String message);
+	
+	/**
+	 * Called when a message is sent to other entities, good for debugging.
+	 */
+	public void onSent(JSONObject json, InetAddress to);
+	
+	/**
+	 * Called when a message is received from another entity, good for debugging.
+	 */
+	public void onReceive(JSONObject json, InetAddress from);
 }
