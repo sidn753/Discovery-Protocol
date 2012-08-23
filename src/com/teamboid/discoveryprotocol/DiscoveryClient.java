@@ -275,7 +275,6 @@ public class DiscoveryClient {
 	
 	@Override
 	public void finalize() {
-		offline();
 		socket.close();
 		socket = null;
 		receiveThread.interrupt();
