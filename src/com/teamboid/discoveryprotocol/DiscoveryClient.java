@@ -71,12 +71,13 @@ public class DiscoveryClient {
 	private DiscoveryListener events;
 	private String _name;
 	private String _status;
-
+	private boolean _filterOwn;
+	
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
 		InetAddress address = packet.getAddress();
-		if (address.getHostAddress().equals(myIP.getHostAddress())) {
+		if (_filterOwn && address.getHostAddress().equals(myIP.getHostAddress())) {
 			// Filter out packet broadcasts that you sent.
 			return;
 		}
@@ -97,7 +98,7 @@ public class DiscoveryClient {
 		} else if (content.optString("type").equals("offline")) {
 			events.onOffline(entity);
 		} else if (content.optString("type").equals("nickname")) {
-			events.onNameChange(null, content.optString("name"));
+			events.onNameChange(entity);
 		} else if (content.optString("type").equals("status")) {
 			events.onStatus(entity);
 		} else {
@@ -218,6 +219,17 @@ public class DiscoveryClient {
 	}
 
 	/**
+	 * Pings another entity, this is much like poking on Facebook.
+	 */
+	public void ping(DiscoveryEntity to) {
+		ArrayList<String[]> toSend = new ArrayList<String[]>();
+		toSend.add(new String[] { "type", "ping" });
+		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
+		send(toSend, to.getIP());
+	}
+	
+	/**
 	 * Broadcasts an offline notification, telling other entities you're going
 	 * offline.
 	 */
@@ -253,8 +265,17 @@ public class DiscoveryClient {
 		events = listener;
 	}
 
+	/**
+	 * Defaults to true; when set to false, you will receive your own broadcasts. This is good for testing
+	 * your apps when you only have one device to test it (e.g., you will receive your own discovery and response broadcasts).
+	 */
+	public void setFilterSelf(boolean filter) {
+		_filterOwn = filter;
+	}
+	
 	@Override
 	public void finalize() {
+		offline();
 		socket.close();
 		socket = null;
 		receiveThread.interrupt();
