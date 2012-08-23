@@ -77,6 +77,7 @@ public class DiscoveryClient {
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
+		if(events == null) return;
 		InetAddress address = packet.getAddress();
 		if (_filterOwn && address.getHostAddress().equals(myIP.getHostAddress())) {
 			// Filter out packet broadcasts that you sent.
@@ -126,7 +127,9 @@ public class DiscoveryClient {
 						if (socket == null || socket.isClosed())
 							break;
 						e.printStackTrace();
-						events.onError(e.getMessage());
+						if(events != null) {
+							events.onError(e.getMessage());
+						}
 					}
 				}
 			}
@@ -141,7 +144,9 @@ public class DiscoveryClient {
 				toSend.put(a[0], a[1]);
 			} catch (JSONException e) {
 				e.printStackTrace();
-				events.onError(e.getMessage());
+				if(events != null) {
+					events.onError(e.getMessage());
+				}
 			}
 		}
 		try {
@@ -150,10 +155,14 @@ public class DiscoveryClient {
 					NETWORK_PORT));
 		} catch (Exception e) {
 			e.printStackTrace();
-			events.onError("Failed to send a '" + atts.get(0) + "' request! "
+			if(events != null) {
+				events.onError("Failed to send a '" + atts.get(0) + "' request! "
 					+ e.getMessage());
+			}
 		}
-		events.onSent(toSend, to);
+		if(events != null) {
+			events.onSent(toSend, to);
+		}
 	}
 
 	/**
