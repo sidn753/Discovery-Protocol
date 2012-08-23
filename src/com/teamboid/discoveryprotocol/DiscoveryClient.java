@@ -3,6 +3,7 @@ package com.teamboid.discoveryprotocol;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import org.json.JSONException;
@@ -10,6 +11,7 @@ import org.json.JSONObject;
 
 import android.content.Context;
 import android.net.DhcpInfo;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 
 /**
@@ -19,6 +21,7 @@ public class DiscoveryClient {
 
 	public DiscoveryClient(Context context) throws Exception {
 		broadcastAdr = getBroadcastAddress(context);
+		myIP = getMyIP(context);
 		socket = new DatagramSocket(NETWORK_PORT);
 		socket.setBroadcast(true);
 		socket.setReuseAddress(true);
@@ -26,18 +29,41 @@ public class DiscoveryClient {
 	}
 
 	private InetAddress getBroadcastAddress(Context mContext) throws Exception {
-	    WifiManager wifi = (WifiManager)mContext.getSystemService(Context.WIFI_SERVICE);
-	    DhcpInfo dhcp = wifi.getDhcpInfo();
-	    if(dhcp == null) {
-	    	throw new Exception("DHCP info is null, check for a Wifi connection!");
-	    }
-	    int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
-	    byte[] quads = new byte[4];
-	    for (int k = 0; k < 4; k++)
-	      quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
-	    return InetAddress.getByAddress(quads);
+		WifiManager wifi = (WifiManager) mContext
+				.getSystemService(Context.WIFI_SERVICE);
+		DhcpInfo dhcp = wifi.getDhcpInfo();
+		if (dhcp == null) {
+			throw new Exception(
+					"DHCP info is null, check for a Wifi connection!");
+		}
+		int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
+		byte[] quads = new byte[4];
+		for (int k = 0; k < 4; k++)
+			quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
+		return InetAddress.getByAddress(quads);
 	}
 
+	private InetAddress getMyIP(Context mContext) {
+		WifiManager myWifiManager = (WifiManager) mContext
+				.getSystemService(Context.WIFI_SERVICE);
+		WifiInfo myWifiInfo = myWifiManager.getConnectionInfo();
+		int myIp = myWifiInfo.getIpAddress();
+		int intMyIp3 = myIp / 0x1000000;
+		int intMyIp3mod = myIp % 0x1000000;
+		int intMyIp2 = intMyIp3mod / 0x10000;
+		int intMyIp2mod = intMyIp3mod % 0x10000;
+		int intMyIp1 = intMyIp2mod / 0x100;
+		int intMyIp0 = intMyIp2mod % 0x100;
+		try {
+			return InetAddress.getByName(String.valueOf(intMyIp0) + "." + String.valueOf(intMyIp1) + "."
+					+ String.valueOf(intMyIp2) + "." + String.valueOf(intMyIp3));
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private InetAddress myIP;
 	private InetAddress broadcastAdr;
 	private Thread receiveThread;
 	private DatagramSocket socket;
@@ -47,9 +73,13 @@ public class DiscoveryClient {
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
+		InetAddress address = packet.getAddress();
+		if(address.getHostAddress().equals(myIP.getHostAddress())) {
+			//Filter out packet broadcasts that you sent.
+			return;
+		}
 		JSONObject content = new JSONObject(
 				new String(packet.getData(), "UTF8"));
-		InetAddress address = packet.getAddress();
 		events.onReceive(content, address);
 		DiscoveryEntity entity = new DiscoveryEntity(content.optString("name"),
 				address);
@@ -77,7 +107,8 @@ public class DiscoveryClient {
 		receiveThread = new Thread(new Runnable() {
 			public void run() {
 				while (true) {
-					if(socket == null || socket.isClosed()) break;
+					if (socket == null || socket.isClosed())
+						break;
 					byte[] receiveData = new byte[1024];
 					DatagramPacket receivePacket = new DatagramPacket(
 							receiveData, receiveData.length);
@@ -85,6 +116,8 @@ public class DiscoveryClient {
 						socket.receive(receivePacket);
 						processPacket(receivePacket);
 					} catch (Exception e) {
+						if (socket == null || socket.isClosed())
+							break;
 						e.printStackTrace();
 						events.onError(e.getMessage());
 					}
@@ -107,15 +140,15 @@ public class DiscoveryClient {
 		try {
 			byte[] sendData = toSend.toString().getBytes("UTF8");
 			socket.send(new DatagramPacket(sendData, sendData.length, to,
-				NETWORK_PORT));
-		} catch(Exception e) {
+					NETWORK_PORT));
+		} catch (Exception e) {
 			e.printStackTrace();
-			events.onError("Failed to send a '" + atts.get(0) + "' request! " + e.getMessage());
+			events.onError("Failed to send a '" + atts.get(0) + "' request! "
+					+ e.getMessage());
 		}
 		events.onSent(toSend, to);
 	}
 
-	
 	/**
 	 * Broadcasts a discovery request; when entities choose to respond to the
 	 * request, you will receive a callback.
