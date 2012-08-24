@@ -96,6 +96,8 @@ public class DiscoveryClient {
 			events.onOnline(entity);
 		} else if (content.optString("type").equals("chat")) {
 			events.onMessage(entity, content.optString("message"));
+		} else if (content.optString("type").equals("broadcast")) {
+			events.onBroadcast(entity, content.optString("message"));
 		} else if (content.optString("type").equals("offline")) {
 			events.onOffline(entity);
 		} else if (content.optString("type").equals("nickname")) {
