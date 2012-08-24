@@ -83,8 +83,14 @@ public class DiscoveryClient {
 			// Filter out packet broadcasts that you sent.
 			return;
 		}
-		JSONObject content = new JSONObject(
-				new String(packet.getData(), "UTF8"));
+		JSONObject content = null;
+		try { content = new JSONObject(new String(packet.getData(), "UTF8")); } 
+		catch(Exception e) {
+			/**
+			 * Silently ignore packets that don't contain valid JSON. Could be other programs since this protocol intercepts UDP broadcasts too.
+			 */
+			return;
+		}
 		events.onReceive(content, address);
 		DiscoveryEntity entity = new DiscoveryEntity(address, content);
 

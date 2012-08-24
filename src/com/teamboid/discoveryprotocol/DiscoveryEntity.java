@@ -1,12 +1,18 @@
 package com.teamboid.discoveryprotocol;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import org.json.JSONObject;
 
+import android.os.Environment;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.widget.Toast;
 
 /**
  * Represents another device using the discovery protocol.
@@ -78,7 +84,7 @@ public class DiscoveryEntity implements Parcelable {
 	public String toString() {
 		return "DiscoveryRequest [" + _name + ", " + _address.getHostAddress() + ", " + _status + "]";
 	}
-
+	
 	@Override
 	public int describeContents() {
 		return 0;
