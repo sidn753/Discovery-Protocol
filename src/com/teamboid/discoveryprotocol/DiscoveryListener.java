@@ -35,6 +35,11 @@ public interface DiscoveryListener {
 	public void onMessage(DiscoveryEntity from, String message);
 	
 	/**
+	 * Called when another entity broadcasts a message to all other entities on the network.
+	 */
+	public void onBroadcast(DiscoveryEntity from, String message);
+	
+	/**
 	 * Called when another entity updates their status (contained in the DiscoveryEntity object). 
 	 */
 	public void onStatus(DiscoveryEntity from);

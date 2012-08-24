@@ -215,6 +215,19 @@ public class DiscoveryClient {
 		toSend.add(new String[] { "status", _status });
 		send(toSend, to.getAddress());
 	}
+	
+	/**
+	 * Broadcasts a chat message to all other entities on the network.
+	 */
+	public void broadcast(String message) {
+		ArrayList<String[]> toSend = new ArrayList<String[]>();
+		toSend.add(new String[] { "type", "broadcast" });
+		toSend.add(new String[] { "id", Build.SERIAL });
+		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "message", message });
+		toSend.add(new String[] { "status", _status });
+		send(toSend, broadcastAdr);
+	}
 
 	/**
 	 * Updates your status message. When 'true' is passed in the second
