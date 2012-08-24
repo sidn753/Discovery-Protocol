@@ -215,6 +215,9 @@ public class DiscoveryClient {
 	 * Sends a chat message to another entity.
 	 */
 	public void message(DiscoveryEntity to, String message) {
+		if(message != null && message.trim().isEmpty()) {
+			message = null;
+		}
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "chat" });
 		toSend.add(new String[] { "id", Build.SERIAL });
@@ -228,6 +231,9 @@ public class DiscoveryClient {
 	 * Broadcasts a chat message to all other entities on the network.
 	 */
 	public void broadcast(String message) {
+		if(message != null && message.trim().isEmpty()) {
+			message = null;
+		}
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "broadcast" });
 		toSend.add(new String[] { "id", Build.SERIAL });
@@ -244,6 +250,9 @@ public class DiscoveryClient {
 	 * requests.
 	 */
 	public void status(String message, boolean broadcastUpdate) {
+		if(message != null && message.trim().isEmpty()) {
+			message = null;
+		}
 		_status = message;
 		if (broadcastUpdate) {
 			ArrayList<String[]> toSend = new ArrayList<String[]>();
@@ -287,6 +296,9 @@ public class DiscoveryClient {
 	 * in future requests.
 	 */
 	public void nickname(String name, boolean broadcastUpdate) {
+		if(name != null && name.trim().isEmpty()) {
+			name = null;
+		}
 		_name = name;
 		if (broadcastUpdate) {
 			ArrayList<String[]> toSend = new ArrayList<String[]>();
