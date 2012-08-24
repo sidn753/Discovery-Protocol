@@ -84,7 +84,7 @@ public class DiscoveryClient {
 			return;
 		}
 		JSONObject content = null;
-		try { content = new JSONObject(new String(packet.getData(), "UTF8")); } 
+		try { content = new JSONObject(new String(packet.getData(), "UTF8").replace("\0", "").trim()); } 
 		catch(Exception e) {
 			/**
 			 * Silently ignore packets that don't contain valid JSON. Could be other programs since this protocol intercepts UDP broadcasts too.
@@ -125,7 +125,7 @@ public class DiscoveryClient {
 				while (true) {
 					if (socket == null || socket.isClosed())
 						break;
-					byte[] receiveData = new byte[1024];
+					byte[] receiveData = new byte[2000];
 					DatagramPacket receivePacket = new DatagramPacket(
 							receiveData, receiveData.length);
 					try {
