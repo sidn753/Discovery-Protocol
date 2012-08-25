@@ -10,7 +10,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -21,17 +23,17 @@ import android.os.Build;
 public class DiscoveryClient {
 
 	public DiscoveryClient(Context context) throws Exception {
-		broadcastAdr = getBroadcastAddress(context);
-		myIP = getMyIP(context);
+		WifiManager wifi = (WifiManager) context
+				.getSystemService(Context.WIFI_SERVICE);
+		broadcastAdr = getBroadcastAddress(wifi);
+		myIP = getMyIP(wifi);
 		socket = new DatagramSocket(NETWORK_PORT);
 		socket.setBroadcast(true);
 		socket.setReuseAddress(true);
 		startReceiveThread();
 	}
 
-	private InetAddress getBroadcastAddress(Context mContext) throws Exception {
-		WifiManager wifi = (WifiManager) mContext
-				.getSystemService(Context.WIFI_SERVICE);
+	private InetAddress getBroadcastAddress(WifiManager wifi) throws Exception {
 		DhcpInfo dhcp = wifi.getDhcpInfo();
 		if (dhcp == null) {
 			throw new Exception(
@@ -44,10 +46,8 @@ public class DiscoveryClient {
 		return InetAddress.getByAddress(quads);
 	}
 
-	private InetAddress getMyIP(Context mContext) {
-		WifiManager myWifiManager = (WifiManager) mContext
-				.getSystemService(Context.WIFI_SERVICE);
-		WifiInfo myWifiInfo = myWifiManager.getConnectionInfo();
+	private InetAddress getMyIP(WifiManager wifi) {
+		WifiInfo myWifiInfo = wifi.getConnectionInfo();
 		int myIp = myWifiInfo.getIpAddress();
 		int intMyIp3 = myIp / 0x1000000;
 		int intMyIp3mod = myIp % 0x1000000;
@@ -73,21 +73,26 @@ public class DiscoveryClient {
 	private String _name;
 	private String _status;
 	private boolean _filterOwn = true;
-	
+
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
-		if(events == null) return;
+		if (events == null)
+			return;
 		InetAddress address = packet.getAddress();
-		if (_filterOwn && address.getHostAddress().equals(myIP.getHostAddress())) {
+		if (_filterOwn
+				&& address.getHostAddress().equals(myIP.getHostAddress())) {
 			// Filter out packet broadcasts that you sent.
 			return;
 		}
 		JSONObject content = null;
-		try { content = new JSONObject(new String(packet.getData(), "UTF8").replace("\0", "").trim()); } 
-		catch(Exception e) {
+		try {
+			content = new JSONObject(new String(packet.getData(), "UTF8")
+					.replace("\0", "").trim());
+		} catch (Exception e) {
 			/**
-			 * Silently ignore packets that don't contain valid JSON. Could be other programs since this protocol intercepts UDP broadcasts too.
+			 * Silently ignore packets that don't contain valid JSON. Could be
+			 * other programs since this protocol intercepts UDP broadcasts too.
 			 */
 			return;
 		}
@@ -135,7 +140,7 @@ public class DiscoveryClient {
 						if (socket == null || socket.isClosed())
 							break;
 						e.printStackTrace();
-						if(events != null) {
+						if (events != null) {
 							events.onError(e.getMessage());
 						}
 					}
@@ -152,7 +157,7 @@ public class DiscoveryClient {
 				toSend.put(a[0], a[1]);
 			} catch (JSONException e) {
 				e.printStackTrace();
-				if(events != null) {
+				if (events != null) {
 					events.onError(e.getMessage());
 				}
 			}
@@ -163,16 +168,27 @@ public class DiscoveryClient {
 					NETWORK_PORT));
 		} catch (Exception e) {
 			e.printStackTrace();
-			if(events != null) {
-				events.onError("Failed to send a '" + atts.get(0) + "' request! "
-					+ e.getMessage());
+			if (events != null) {
+				events.onError("Failed to send a '" + atts.get(0)
+						+ "' request! " + e.getMessage());
 			}
 		}
-		if(events != null) {
+		if (events != null) {
 			events.onSent(toSend, to);
 		}
 	}
 
+	/**
+	 * Gets whether or not there's an active Wifi connection.
+	 */
+	public boolean isWifiConnected(Context context) {
+		ConnectivityManager connManager = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+		if (mWifi != null && mWifi.isConnected()) {
+			return true;
+		} else return false;
+	}
+	
 	/**
 	 * Broadcasts a discovery request; when entities choose to respond to the
 	 * request, you will receive a callback.
@@ -215,7 +231,7 @@ public class DiscoveryClient {
 	 * Sends a chat message to another entity.
 	 */
 	public void message(DiscoveryEntity to, String message) {
-		if(message != null && message.trim().isEmpty()) {
+		if (message != null && message.trim().isEmpty()) {
 			message = null;
 		}
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
@@ -226,12 +242,12 @@ public class DiscoveryClient {
 		toSend.add(new String[] { "status", _status });
 		send(toSend, to.getAddress());
 	}
-	
+
 	/**
 	 * Broadcasts a chat message to all other entities on the network.
 	 */
 	public void broadcast(String message) {
-		if(message != null && message.trim().isEmpty()) {
+		if (message != null && message.trim().isEmpty()) {
 			message = null;
 		}
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
@@ -250,7 +266,7 @@ public class DiscoveryClient {
 	 * requests.
 	 */
 	public void status(String message, boolean broadcastUpdate) {
-		if(message != null && message.trim().isEmpty()) {
+		if (message != null && message.trim().isEmpty()) {
 			message = null;
 		}
 		_status = message;
@@ -275,7 +291,7 @@ public class DiscoveryClient {
 		toSend.add(new String[] { "status", _status });
 		send(toSend, to.getAddress());
 	}
-	
+
 	/**
 	 * Broadcasts an offline notification, telling other entities you're going
 	 * offline.
@@ -296,7 +312,7 @@ public class DiscoveryClient {
 	 * in future requests.
 	 */
 	public void nickname(String name, boolean broadcastUpdate) {
-		if(name != null && name.trim().isEmpty()) {
+		if (name != null && name.trim().isEmpty()) {
 			name = null;
 		}
 		_name = name;
@@ -318,13 +334,15 @@ public class DiscoveryClient {
 	}
 
 	/**
-	 * Defaults to true; when set to false, you will receive your own broadcasts. This is good for testing
-	 * your apps when you only have one device to test it (e.g., you will receive your own discovery and response broadcasts).
+	 * Defaults to true; when set to false, you will receive your own
+	 * broadcasts. This is good for testing your apps when you only have one
+	 * device to test it (e.g., you will receive your own discovery and response
+	 * broadcasts).
 	 */
 	public void setFilterSelf(boolean filter) {
 		_filterOwn = filter;
 	}
-	
+
 	@Override
 	public void finalize() {
 		socket.close();
