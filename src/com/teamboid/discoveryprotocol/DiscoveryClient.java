@@ -73,7 +73,7 @@ public class DiscoveryClient {
 	private String _name;
 	private String _status;
 	private boolean _filterOwn = true;
-
+	
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
@@ -117,6 +117,8 @@ public class DiscoveryClient {
 			events.onStatus(entity);
 		} else if (content.optString("type").equals("ping")) {
 			events.onPing(entity);
+		} else if (content.optString("type").equals("ping-back")) {
+			events.onPingBack(entity);
 		} else {
 			events.onError("Received unknown request from "
 					+ address.getHostAddress() + " (type: "
@@ -177,7 +179,7 @@ public class DiscoveryClient {
 			events.onSent(toSend, to);
 		}
 	}
-
+	
 	/**
 	 * Gets whether or not there's an active Wifi connection.
 	 */
@@ -185,6 +187,17 @@ public class DiscoveryClient {
 		ConnectivityManager connManager = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
 		NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 		if (mWifi != null && mWifi.isConnected()) {
+			return true;
+		} else return false;
+	}
+	
+	/**
+	 * Gets whether or not creating a Wifi connection is currently in progress. Also returns true if you're already connected.
+	 */
+	public boolean isWifiConnecting(Context context) {
+		ConnectivityManager connManager = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+		if (mWifi != null && mWifi.isConnectedOrConnecting()) {
 			return true;
 		} else return false;
 	}
@@ -281,11 +294,23 @@ public class DiscoveryClient {
 	}
 
 	/**
-	 * Pings another entity, this is much like poking on Facebook.
+	 * Pings another entity, if they don't immediately ping back then it's likely they are no longer online.
 	 */
 	public void ping(DiscoveryEntity to) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
 		toSend.add(new String[] { "type", "ping" });
+		toSend.add(new String[] { "id", Build.SERIAL });
+		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
+		send(toSend, to.getAddress());
+	}
+	
+	/**
+	 * Responds to a ping, indicating that you are online.
+	 */
+	public void pingBack(DiscoveryEntity to) {
+		ArrayList<String[]> toSend = new ArrayList<String[]>();
+		toSend.add(new String[] { "type", "ping-back" });
 		toSend.add(new String[] { "id", Build.SERIAL });
 		toSend.add(new String[] { "name", _name });
 		toSend.add(new String[] { "status", _status });

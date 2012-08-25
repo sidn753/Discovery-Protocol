@@ -61,9 +61,14 @@ public interface DiscoveryListener {
 	public void onError(String message);
 	
 	/** 
-	 * Called when another entity pings you, this is much like poking on Facebook.
+	 * Called when another entity pings you, meaning they are wondering if you're online.
 	 */
 	public void onPing(DiscoveryEntity entity);
+	
+	/** 
+	 * Called when another entity responds to a previous ping.
+	 */
+	public void onPingBack(DiscoveryEntity entity);
 	
 	/**
 	 * Called when a message is sent to other entities, good for debugging.
