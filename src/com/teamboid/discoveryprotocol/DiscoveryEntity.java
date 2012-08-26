@@ -22,6 +22,12 @@ public class DiscoveryEntity implements Parcelable {
 		_name = json.optString("name");
 		_status = json.optString("status");
 	}
+	public DiscoveryEntity(JSONObject json) throws Exception {
+		_address = InetAddress.getByName(json.getString("address"));
+		_id = json.optString("id");
+		_name = json.optString("name");
+		_status = json.optString("status");
+	}
 
 	private InetAddress _address;
 	private String _id;
@@ -82,6 +88,17 @@ public class DiscoveryEntity implements Parcelable {
 		} else {
 			return false;
 		}
+	}
+	
+	public JSONObject toJSON() {
+		JSONObject toReturn = new JSONObject();
+		try { 
+			toReturn.put("address", _address.getHostAddress());
+			toReturn.put("id", _id);
+			toReturn.put("name", _name);
+			toReturn.put("status", _status);
+		} catch(Exception e) { }
+		return toReturn;
 	}
 	
 	@Override

@@ -3,6 +3,7 @@ package com.teamboid.discoveryprotocol;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
@@ -27,9 +28,10 @@ public class DiscoveryClient {
 				.getSystemService(Context.WIFI_SERVICE);
 		broadcastAdr = getBroadcastAddress(wifi);
 		myIP = getMyIP(wifi);
-		socket = new DatagramSocket(NETWORK_PORT);
+		socket = new DatagramSocket(null);
 		socket.setBroadcast(true);
 		socket.setReuseAddress(true);
+		socket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), NETWORK_PORT));
 		startReceiveThread();
 	}
 
@@ -73,7 +75,7 @@ public class DiscoveryClient {
 	private String _name;
 	private String _status;
 	private boolean _filterOwn = true;
-	
+
 	private final static int NETWORK_PORT = 2000;
 
 	private void processPacket(DatagramPacket packet) throws Exception {
@@ -179,29 +181,36 @@ public class DiscoveryClient {
 			events.onSent(toSend, to);
 		}
 	}
-	
+
 	/**
 	 * Gets whether or not there's an active Wifi connection.
 	 */
 	public boolean isWifiConnected(Context context) {
-		ConnectivityManager connManager = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+		ConnectivityManager connManager = (ConnectivityManager) context
+				.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo mWifi = connManager
+				.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 		if (mWifi != null && mWifi.isConnected()) {
 			return true;
-		} else return false;
+		} else
+			return false;
 	}
-	
+
 	/**
-	 * Gets whether or not creating a Wifi connection is currently in progress. Also returns true if you're already connected.
+	 * Gets whether or not creating a Wifi connection is currently in progress.
+	 * Also returns true if you're already connected.
 	 */
 	public boolean isWifiConnecting(Context context) {
-		ConnectivityManager connManager = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+		ConnectivityManager connManager = (ConnectivityManager) context
+				.getSystemService(Context.CONNECTIVITY_SERVICE);
+		NetworkInfo mWifi = connManager
+				.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 		if (mWifi != null && mWifi.isConnectedOrConnecting()) {
 			return true;
-		} else return false;
+		} else
+			return false;
 	}
-	
+
 	/**
 	 * Broadcasts a discovery request; when entities choose to respond to the
 	 * request, you will receive a callback.
@@ -294,7 +303,8 @@ public class DiscoveryClient {
 	}
 
 	/**
-	 * Pings another entity, if they don't immediately ping back then it's likely they are no longer online.
+	 * Pings another entity, if they don't immediately ping back then it's
+	 * likely they are no longer online.
 	 */
 	public void ping(DiscoveryEntity to) {
 		ArrayList<String[]> toSend = new ArrayList<String[]>();
@@ -304,7 +314,7 @@ public class DiscoveryClient {
 		toSend.add(new String[] { "status", _status });
 		send(toSend, to.getAddress());
 	}
-	
+
 	/**
 	 * Responds to a ping, indicating that you are online.
 	 */
