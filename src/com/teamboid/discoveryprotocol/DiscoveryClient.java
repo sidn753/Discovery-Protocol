@@ -89,42 +89,13 @@ public class DiscoveryClient {
 			return;
 		}
 		JSONObject content = null;
-		String contentStr = new String(packet.getData(), "UTF8").replace("\0",
-				"").trim();
+		String contentStr = new String(packet.getData(), "UTF8").replace("\0", "").trim();
 		try {
 			content = new JSONObject(contentStr);
 		} catch (Exception e) {
 			/**
-			 * Packets that don't contain invalid JSON are assumed to be a
-			 * message.
-			 */
-			if (!contentStr.contains("\n")) {
-				/**
-				 * If the message contains no ID header, it might be a
-				 * broadcasted packet for another protocol or something. It will
-				 * be silently ignored.
-				 */
-				return;
-			}
-			String[] splitNewLines = contentStr.split("\n");
-			if (splitNewLines.length < 3) {
-				/**
-				 * If the message contains less than 3 lines, it
-				 * might be a broadcasted packet for another protocol or
-				 * something. It will be silently ignored.
-				 */
-				return;
-			}
-			String id = splitNewLines[0];
-			String name = splitNewLines[1];
-			String body = "";
-			/**
-			 * Just in case the body of the message has new lines in it, combine the rest of the message line breaks into the body/
-			 */
-			for(int i = 2; i < splitNewLines.length; i++) {
-				body += splitNewLines[i];
-			}
-			events.onMessage(id, name, body);
+			 * Packets that don't contain valid JSON are ignored.
+			 */		
 			return;
 		}
 		events.onReceive(content.toString(), address);
@@ -148,6 +119,8 @@ public class DiscoveryClient {
 			events.onPing(entity);
 		} else if (content.optString("type").equals("ping-back")) {
 			events.onPingBack(entity);
+		} else if (content.optString("type").equals("chat")) {
+			events.onMessage(entity, content.optString("message"));
 		} else {
 			events.onError("Received unknown request from "
 					+ address.getHostAddress() + " (type: "
@@ -179,23 +152,6 @@ public class DiscoveryClient {
 			}
 		});
 		receiveThread.start();
-	}
-
-	private void send(String toSend, InetAddress to) {
-		try {
-			byte[] sendData = toSend.toString().getBytes("UTF8");
-			socket.send(new DatagramPacket(sendData, sendData.length, to,
-					NETWORK_PORT));
-		} catch (Exception e) {
-			e.printStackTrace();
-			if (events != null) {
-				events.onError("Failed to send '" + toSend + "'; "
-						+ e.getMessage());
-			}
-		}
-		if (events != null) {
-			events.onSent(toSend, to);
-		}
 	}
 
 	private void send(ArrayList<String[]> atts, InetAddress to) {
@@ -302,11 +258,12 @@ public class DiscoveryClient {
 		if (message != null && message.trim().isEmpty()) {
 			message = null;
 		}
-		/**
-		 * Message packets don't use JSON to keep the packet size down, and to
-		 * allow easy sending of messages from test tools or a Terminal.
-		 */
-		String toSend = Build.SERIAL + "\n" + _name + "\n" + message;
+		ArrayList<String[]> toSend = new ArrayList<String[]>();
+		toSend.add(new String[] { "type", "chat" });
+		toSend.add(new String[] { "id", Build.SERIAL });
+		toSend.add(new String[] { "name", _name });
+		toSend.add(new String[] { "status", _status });
+		toSend.add(new String[] { "message", message });
 		send(toSend, to.getAddress());
 	}
 

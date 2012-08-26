@@ -30,7 +30,7 @@ public interface DiscoveryListener {
 	/**
 	 * Called when another entity sends you a chat message. 
 	 */
-	public void onMessage(String entityID, String entityName, String message);
+	public void onMessage(DiscoveryEntity from, String message);
 	
 	/**
 	 * Called when another entity broadcasts a message to all other entities on the network.
