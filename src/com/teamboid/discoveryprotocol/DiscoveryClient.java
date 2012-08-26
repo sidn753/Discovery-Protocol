@@ -31,7 +31,8 @@ public class DiscoveryClient {
 		socket = new DatagramSocket(null);
 		socket.setBroadcast(true);
 		socket.setReuseAddress(true);
-		socket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), NETWORK_PORT));
+		socket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"),
+				NETWORK_PORT));
 		startReceiveThread();
 	}
 
@@ -88,17 +89,45 @@ public class DiscoveryClient {
 			return;
 		}
 		JSONObject content = null;
+		String contentStr = new String(packet.getData(), "UTF8").replace("\0",
+				"").trim();
 		try {
-			content = new JSONObject(new String(packet.getData(), "UTF8")
-					.replace("\0", "").trim());
+			content = new JSONObject(contentStr);
 		} catch (Exception e) {
 			/**
-			 * Silently ignore packets that don't contain valid JSON. Could be
-			 * other programs since this protocol intercepts UDP broadcasts too.
+			 * Packets that don't contain invalid JSON are assumed to be a
+			 * message.
 			 */
+			if (!contentStr.contains("\n")) {
+				/**
+				 * If the message contains no ID header, it might be a
+				 * broadcasted packet for another protocol or something. It will
+				 * be silently ignored.
+				 */
+				return;
+			}
+			String[] splitNewLines = contentStr.split("\n");
+			if (splitNewLines.length < 3) {
+				/**
+				 * If the message contains less than 3 lines, it
+				 * might be a broadcasted packet for another protocol or
+				 * something. It will be silently ignored.
+				 */
+				return;
+			}
+			String id = splitNewLines[0];
+			String name = splitNewLines[1];
+			String body = "";
+			/**
+			 * Just in case the body of the message has new lines in it, combine the rest of the message line breaks into the body/
+			 */
+			for(int i = 2; i < splitNewLines.length; i++) {
+				body += splitNewLines[i];
+			}
+			events.onMessage(id, name, body);
 			return;
 		}
-		events.onReceive(content, address);
+		events.onReceive(content.toString(), address);
 		DiscoveryEntity entity = new DiscoveryEntity(address, content);
 
 		if (content.optString("type").equals("discovery")) {
@@ -107,8 +136,6 @@ public class DiscoveryClient {
 			events.onDiscoveryResponse(entity);
 		} else if (content.optString("type").equals("online")) {
 			events.onOnline(entity);
-		} else if (content.optString("type").equals("chat")) {
-			events.onMessage(entity, content.optString("message"));
 		} else if (content.optString("type").equals("broadcast")) {
 			events.onBroadcast(entity, content.optString("message"));
 		} else if (content.optString("type").equals("offline")) {
@@ -154,6 +181,23 @@ public class DiscoveryClient {
 		receiveThread.start();
 	}
 
+	private void send(String toSend, InetAddress to) {
+		try {
+			byte[] sendData = toSend.toString().getBytes("UTF8");
+			socket.send(new DatagramPacket(sendData, sendData.length, to,
+					NETWORK_PORT));
+		} catch (Exception e) {
+			e.printStackTrace();
+			if (events != null) {
+				events.onError("Failed to send '" + toSend + "'; "
+						+ e.getMessage());
+			}
+		}
+		if (events != null) {
+			events.onSent(toSend, to);
+		}
+	}
+
 	private void send(ArrayList<String[]> atts, InetAddress to) {
 		JSONObject toSend = new JSONObject();
 		for (String[] a : atts) {
@@ -178,7 +222,7 @@ public class DiscoveryClient {
 			}
 		}
 		if (events != null) {
-			events.onSent(toSend, to);
+			events.onSent(toSend.toString(), to);
 		}
 	}
 
@@ -250,18 +294,19 @@ public class DiscoveryClient {
 	}
 
 	/**
-	 * Sends a chat message to another entity.
+	 * Sends a chat message to another entity. The raw format of a chat message
+	 * is a little different from other transmission types because it's not
+	 * wrapped in JSON.
 	 */
 	public void message(DiscoveryEntity to, String message) {
 		if (message != null && message.trim().isEmpty()) {
 			message = null;
 		}
-		ArrayList<String[]> toSend = new ArrayList<String[]>();
-		toSend.add(new String[] { "type", "chat" });
-		toSend.add(new String[] { "id", Build.SERIAL });
-		toSend.add(new String[] { "name", _name });
-		toSend.add(new String[] { "message", message });
-		toSend.add(new String[] { "status", _status });
+		/**
+		 * Message packets don't use JSON to keep the packet size down, and to
+		 * allow easy sending of messages from test tools or a Terminal.
+		 */
+		String toSend = Build.SERIAL + "\n" + _name + "\n" + message;
 		send(toSend, to.getAddress());
 	}
 

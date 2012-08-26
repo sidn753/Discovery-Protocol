@@ -2,8 +2,6 @@ package com.teamboid.discoveryprotocol;
 
 import java.net.InetAddress;
 
-import org.json.JSONObject;
-
 /**
  * @author Aidan Follestad
  */
@@ -32,7 +30,7 @@ public interface DiscoveryListener {
 	/**
 	 * Called when another entity sends you a chat message. 
 	 */
-	public void onMessage(DiscoveryEntity from, String message);
+	public void onMessage(String entityID, String entityName, String message);
 	
 	/**
 	 * Called when another entity broadcasts a message to all other entities on the network.
@@ -73,10 +71,10 @@ public interface DiscoveryListener {
 	/**
 	 * Called when a message is sent to other entities, good for debugging.
 	 */
-	public void onSent(JSONObject json, InetAddress to);
+	public void onSent(String data, InetAddress to);
 	
 	/**
 	 * Called when a message is received from another entity, good for debugging.
 	 */
-	public void onReceive(JSONObject json, InetAddress from);
+	public void onReceive(String data, InetAddress from);
 }
