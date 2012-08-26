@@ -75,6 +75,16 @@ public class DiscoveryEntity implements Parcelable {
 	}
 
 	@Override
+	public boolean equals(Object otherEntity) {
+		if(otherEntity instanceof DiscoveryEntity) {
+			DiscoveryEntity entity = (DiscoveryEntity)otherEntity;
+			return this.getID().equals(entity.getID());
+		} else {
+			return false;
+		}
+	}
+	
+	@Override
 	public String toString() {
 		return "DiscoveryRequest [" + _name + ", " + _address.getHostAddress() + ", " + _status + "]";
 	}
