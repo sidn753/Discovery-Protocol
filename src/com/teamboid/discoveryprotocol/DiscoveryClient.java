@@ -250,9 +250,7 @@ public class DiscoveryClient {
 	}
 
 	/**
-	 * Sends a chat message to another entity. The raw format of a chat message
-	 * is a little different from other transmission types because it's not
-	 * wrapped in JSON.
+	 * Sends a chat message to another entity.
 	 */
 	public void message(DiscoveryEntity to, String message) {
 		if (message != null && message.trim().isEmpty()) {
